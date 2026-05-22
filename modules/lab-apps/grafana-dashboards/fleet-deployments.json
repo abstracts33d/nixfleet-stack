@@ -1,0 +1,1260 @@
+{
+  "uid": "fleet-deployments",
+  "title": "Fleet Deployments",
+  "tags": [
+    "fleet",
+    "deployments",
+    "nixfleet"
+  ],
+  "schemaVersion": 39,
+  "timezone": "",
+  "fiscalYearStartMonth": 0,
+  "editable": true,
+  "graphTooltip": 0,
+  "liveNow": false,
+  "refresh": "15s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "annotations": {
+    "list": []
+  },
+  "links": [
+    {
+      "type": "link",
+      "title": "NixFleet Events",
+      "tooltip": "",
+      "icon": "external link",
+      "url": "/d/nixfleet-events",
+      "tags": [],
+      "asDropdown": false,
+      "includeVars": false,
+      "keepTime": true,
+      "targetBlank": false
+    },
+    {
+      "type": "link",
+      "title": "Fleet Overview",
+      "tooltip": "",
+      "icon": "external link",
+      "url": "/d/fleet-overview",
+      "tags": [],
+      "asDropdown": false,
+      "includeVars": false,
+      "keepTime": true,
+      "targetBlank": false
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "host",
+        "label": "Host",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "PBFA97CFB590B2093"
+        },
+        "query": {
+          "query": "label_values(up{job=\"node\"}, instance)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "regex": "/^(.+?):/",
+        "refresh": 2,
+        "sort": 1,
+        "includeAll": true,
+        "allValue": ".+",
+        "multi": true,
+        "current": {
+          "text": "All",
+          "value": "$__all",
+          "selected": true
+        },
+        "options": [],
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1000,
+      "type": "row",
+      "title": "Snapshot",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Rollouts in flight",
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "nixfleet-cp"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "nixfleet-cp"
+          },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "/v1/rollouts",
+          "url_options": {
+            "method": "GET",
+            "data": ""
+          },
+          "format": "table",
+          "root_selector": "rollouts",
+          "columns": [
+            {
+              "selector": "rolloutId",
+              "text": "id",
+              "type": "string"
+            }
+          ],
+          "computed_columns": [],
+          "filters": [],
+          "global_query_id": "",
+          "parser": "backend"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "count"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "0",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "description": "Count of rollouts currently in non-terminal states (Opening / Active / Converging). Drops to 0 when the fleet is steady-state."
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Fleet size",
+      "gridPos": {
+        "x": 4,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "nixfleet-cp"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "nixfleet-cp"
+          },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "/v1/hosts",
+          "url_options": {
+            "method": "GET",
+            "data": ""
+          },
+          "format": "table",
+          "root_selector": "hosts",
+          "columns": [
+            {
+              "selector": "hostname",
+              "text": "h",
+              "type": "string"
+            }
+          ],
+          "computed_columns": [],
+          "filters": [],
+          "global_query_id": "",
+          "parser": "backend"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "count"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "0",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Hosts converged",
+      "gridPos": {
+        "x": 8,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "nixfleet-cp"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "nixfleet-cp"
+          },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "/v1/hosts",
+          "url_options": {
+            "method": "GET",
+            "data": ""
+          },
+          "format": "table",
+          "root_selector": "hosts",
+          "columns": [
+            {
+              "selector": "hostname",
+              "text": "h",
+              "type": "string"
+            },
+            {
+              "selector": "converged",
+              "text": "c",
+              "type": "boolean"
+            }
+          ],
+          "computed_columns": [],
+          "filters": [
+            {
+              "field": "c",
+              "operator": "equals",
+              "value": [
+                "true"
+              ]
+            }
+          ],
+          "global_query_id": "",
+          "parser": "backend"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "count"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "0",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Hosts diverged",
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "nixfleet-cp"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "nixfleet-cp"
+          },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "/v1/hosts",
+          "url_options": {
+            "method": "GET",
+            "data": ""
+          },
+          "format": "table",
+          "root_selector": "hosts",
+          "columns": [
+            {
+              "selector": "hostname",
+              "text": "h",
+              "type": "string"
+            },
+            {
+              "selector": "converged",
+              "text": "c",
+              "type": "boolean"
+            }
+          ],
+          "computed_columns": [],
+          "filters": [
+            {
+              "field": "c",
+              "operator": "equals",
+              "value": [
+                "false"
+              ]
+            }
+          ],
+          "global_query_id": "",
+          "parser": "backend"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "count"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "0",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "red"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "CP version",
+      "gridPos": {
+        "x": 16,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "refId": "A",
+          "expr": "nixfleet_cp_build_info",
+          "legendFormat": "{{version}}",
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^version$/",
+          "values": false
+        },
+        "textMode": "name",
+        "colorMode": "none",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "CP up",
+      "gridPos": {
+        "x": 20,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "refId": "A",
+          "expr": "up{job=\"nixfleet-cp\"}",
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "text": "DOWN",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "UP",
+                  "color": "green"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 50,
+      "title": "Quarantined closures",
+      "description": "Hosts whose currently-deployed closure has been quarantined by CP (will refuse to dispatch). Non-zero = CP is preventing one or more hosts from re-receiving a known-bad closure.",
+      "type": "stat",
+      "gridPos": {
+        "x": 24,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "nixfleet-cp"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "nixfleet-cp"
+          },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "/v1/hosts",
+          "url_options": {
+            "method": "GET",
+            "data": ""
+          },
+          "format": "table",
+          "root_selector": "hosts",
+          "columns": [
+            {
+              "selector": "hostname",
+              "text": "h",
+              "type": "string"
+            },
+            {
+              "selector": "quarantinedClosure",
+              "text": "q",
+              "type": "string"
+            }
+          ],
+          "filters": [
+            {
+              "field": "q",
+              "operator": "notequals",
+              "value": [
+                ""
+              ]
+            }
+          ],
+          "computed_columns": [],
+          "global_query_id": "",
+          "parser": "backend"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "count"
+          ],
+          "fields": "/.*/",
+          "values": false
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 51,
+      "title": "Hosts pending reboot",
+      "description": "Hosts where the agent has staged a new closure (pendingClosureHash set) but hasn't yet rebooted into it. Non-zero is fine during a rollout \u2014 durable non-zero means a host hasn't picked up.",
+      "type": "stat",
+      "gridPos": {
+        "x": 28,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "nixfleet-cp"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "nixfleet-cp"
+          },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "/v1/hosts",
+          "url_options": {
+            "method": "GET",
+            "data": ""
+          },
+          "format": "table",
+          "root_selector": "hosts",
+          "columns": [
+            {
+              "selector": "hostname",
+              "text": "h",
+              "type": "string"
+            },
+            {
+              "selector": "pendingReboot",
+              "text": "r",
+              "type": "boolean"
+            }
+          ],
+          "filters": [
+            {
+              "field": "r",
+              "operator": "equals",
+              "value": [
+                "true"
+              ]
+            }
+          ],
+          "computed_columns": [],
+          "global_query_id": "",
+          "parser": "backend"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "count"
+          ],
+          "fields": "/.*/",
+          "values": false
+        },
+        "textMode": "value",
+        "graphMode": "none",
+        "colorMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 1001,
+      "type": "row",
+      "title": "Hosts",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "table",
+      "title": "Hosts state",
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "nixfleet-cp"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "nixfleet-cp"
+          },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "/v1/hosts",
+          "url_options": {
+            "method": "GET",
+            "data": ""
+          },
+          "format": "table",
+          "root_selector": "hosts",
+          "columns": [
+            {
+              "selector": "hostname",
+              "text": "Host",
+              "type": "string"
+            },
+            {
+              "selector": "channel",
+              "text": "Channel",
+              "type": "string"
+            },
+            {
+              "selector": "converged",
+              "text": "Converged",
+              "type": "boolean"
+            },
+            {
+              "selector": "currentClosureHash",
+              "text": "Current closure",
+              "type": "string"
+            },
+            {
+              "selector": "pendingClosureHash",
+              "text": "Pending closure",
+              "type": "string"
+            },
+            {
+              "selector": "quarantinedClosure",
+              "text": "Quarantined closure",
+              "type": "string"
+            },
+            {
+              "selector": "rolloutState",
+              "text": "Rollout state",
+              "type": "string"
+            },
+            {
+              "selector": "lastRolloutId",
+              "text": "Rollout id",
+              "type": "string"
+            },
+            {
+              "selector": "pendingReboot",
+              "text": "Reboot pending",
+              "type": "boolean"
+            },
+            {
+              "selector": "outstandingComplianceFailures",
+              "text": "Compliance fail",
+              "type": "number"
+            },
+            {
+              "selector": "outstandingRuntimeGateErrors",
+              "text": "Runtime errors",
+              "type": "number"
+            },
+            {
+              "selector": "outstandingHealthFailures",
+              "text": "Health fail",
+              "type": "number"
+            }
+          ],
+          "computed_columns": [],
+          "filters": [
+            {
+              "field": "Host",
+              "operator": "regex",
+              "value": [
+                "$host"
+              ]
+            }
+          ],
+          "global_query_id": "",
+          "parser": "backend"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "displayMode": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Converged"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "true": {
+                        "text": "\u2713 converged",
+                        "color": "green"
+                      },
+                      "false": {
+                        "text": "\u2717 diverged",
+                        "color": "red"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Current closure"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 1002,
+      "type": "row",
+      "title": "Rollouts",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "type": "table",
+      "title": "Active rollouts",
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 24,
+        "h": 6
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "nixfleet-cp"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "nixfleet-cp"
+          },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "/v1/rollouts",
+          "url_options": {
+            "method": "GET",
+            "data": ""
+          },
+          "format": "table",
+          "root_selector": "rollouts",
+          "columns": [
+            {
+              "selector": "rolloutId",
+              "text": "Rollout",
+              "type": "string"
+            },
+            {
+              "selector": "channel",
+              "text": "Channel",
+              "type": "string"
+            },
+            {
+              "selector": "createdAt",
+              "text": "Created",
+              "type": "timestamp"
+            },
+            {
+              "selector": "currentWave",
+              "text": "Current wave",
+              "type": "number"
+            },
+            {
+              "selector": "hostStates",
+              "text": "Per-host states",
+              "type": "string"
+            }
+          ],
+          "computed_columns": [],
+          "filters": [],
+          "global_query_id": "",
+          "parser": "backend"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 1003,
+      "type": "row",
+      "title": "Activity",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Gate block rate (per 5m)",
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "refId": "A",
+          "expr": "sum by (gate) (rate(nixfleet_gate_block_total[5m]))",
+          "legendFormat": "{{gate}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right"
+        }
+      }
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Compliance failures (per 5m)",
+      "gridPos": {
+        "x": 12,
+        "y": 22,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "refId": "A",
+          "expr": "sum by (host, control_id) (rate(nixfleet_compliance_failure_events_total[5m]))",
+          "legendFormat": "{{host}} \u00b7 {{control_id}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right"
+        }
+      }
+    },
+    {
+      "id": 1004,
+      "type": "row",
+      "title": "Recent events",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 31,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 40,
+      "type": "logs",
+      "title": "Recent dispatch decisions ($host)",
+      "gridPos": {
+        "x": 0,
+        "y": 31,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-lab"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-lab"
+          },
+          "refId": "A",
+          "expr": "{unit=\"nixfleet-control-plane.service\"} | json | line_format \"{{.message}}\" | json | target = \"dispatch\" | fields_hostname =~ \"${host}\" | line_format \"{{.fields_hostname}}\\t{{.fields_message}}\"",
+          "queryType": "range"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "dedupStrategy": "none"
+      }
+    },
+    {
+      "id": 60,
+      "title": "Recent cert renewals + enrollments",
+      "description": "CP-side issuance journal \u2014 agent calls to /v1/agent/enroll (first-time) or /v1/agent/renew (Caveat 3 rotation worker). Useful to confirm rotation cadence on long-validity certs.",
+      "type": "logs",
+      "gridPos": {
+        "x": 0,
+        "y": 39,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-lab"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-lab"
+          },
+          "expr": "{unit=\"nixfleet-control-plane.service\"} | json | line_format `{{.message}}` | json | target = `issuance` |~ `renew|enroll`",
+          "queryType": "range",
+          "maxLines": 100
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
+      }
+    },
+    {
+      "id": 61,
+      "title": "Recent rollback firings",
+      "description": "Agent rollback-and-halt fires. Detached systemd-run flips /run/current-system back to the prior closure; the agent SIGTERMs mid-poll and Caveat 4 CP synth recovers state.",
+      "type": "logs",
+      "gridPos": {
+        "x": 12,
+        "y": 39,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-lab"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-lab"
+          },
+          "expr": "{unit=\"nixfleet-agent.service\"} |~ `triggering local rollback|switching profile`",
+          "queryType": "range",
+          "maxLines": 100
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
+      }
+    },
+    {
+      "id": 62,
+      "title": "Compliance audit (per-control override reasons)",
+      "description": "ProbeResult events carrying operator-declared overrideReason text (Caveat 1 audit-trail propagation). Each row is a per-control compliance decision the operator pinned in fleet.nix.",
+      "type": "logs",
+      "gridPos": {
+        "x": 0,
+        "y": 47,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-lab"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-lab"
+          },
+          "expr": "{unit=\"nixfleet-control-plane.service\"} | json | line_format `{{.message}}` | json | target = `events` |~ `ProbeResult` |~ `overrideReason`",
+          "queryType": "range",
+          "maxLines": 100
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
+      }
+    },
+    {
+      "id": 70,
+      "title": "Signed sidecar polls (revocations + bootstrap nonces)",
+      "description": "CP 60s polls of revocations.json + bootstrap-nonces.json (signed sidecars in fleet.git/releases/). Each poll line carries entries + signed_at + ci_commit; non-zero entries = allowlist actively enforced.",
+      "type": "logs",
+      "gridPos": {
+        "x": 0,
+        "y": 55,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-lab"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-lab"
+          },
+          "expr": "{unit=\"nixfleet-control-plane.service\"} | json | line_format `{{.message}}` | json | target =~ `revocations|bootstrap_nonces`",
+          "queryType": "range",
+          "maxLines": 100
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
+      }
+    },
+    {
+      "id": 71,
+      "title": "Synth-converge gate decisions",
+      "description": "CP synth-converge path: when a host's closure is unchanged across a fleet bump, CP synthesises Pending \u2192 Converged. The same gate chain (channel-edges, wave-promotion, host-edges, disruption-budget, compliance-wave, quarantine) is consulted as for real dispatch \u2014 keeps ordering honest for unchanged-closure hosts. Also includes post-rollback Failed \u2192 Reverted synth.",
+      "type": "logs",
+      "gridPos": {
+        "x": 12,
+        "y": 55,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-lab"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-lab"
+          },
+          "expr": "{unit=\"nixfleet-control-plane.service\"} | json | line_format `{{.message}}` | json | target = `cp_reducer` |~ `synth-converge held|synthesizing Pending|synthesizing Remote(Activation|Rollback)Complete|post-restart recovery`",
+          "queryType": "range",
+          "maxLines": 100
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
+      }
+    }
+  ]
+}
