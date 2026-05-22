@@ -17,7 +17,7 @@
       configWritable = true; # HACS and custom integrations need write access
       extraPackages = ps: [
         ps.psycopg2 # PostgreSQL driver for recorder
-        (ps.callPackage ../../../../packages/hyxi-cloud-api.nix { }) # HYXi Cloud integration
+        (ps.callPackage ../../../packages/hyxi-cloud-api.nix { }) # HYXi Cloud integration
       ];
 
       extraComponents = [
