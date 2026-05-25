@@ -14,10 +14,24 @@ let
   services = fleetServices;
   internalDomain = "lab.internal";
   publicDomain = "theabstractconnection.com";
-  # Temporary preview of arcanesys-website (pair-review). Vendored
-  # pre-built Astro output — revert this directory + the root vhost
-  # below once the upstream pitch site goes live.
-  previewSite = ./arcanesys-website-preview;
+  apexSite = pkgs.writeTextDir "index.html" ''
+    <!doctype html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      <title>the abstract connection</title>
+      <style>
+        html,body{margin:0;height:100%;background:#000;color:#fff;
+          font-family:system-ui,-apple-system,sans-serif}
+        body{display:flex;align-items:center;justify-content:center}
+        h1{font-weight:300;letter-spacing:0.15em;
+           font-size:clamp(1.2rem,4vw,2.5rem);margin:0}
+      </style>
+    </head>
+    <body><h1>the abstract connection</h1></body>
+    </html>
+  '';
 
   # Internal vhosts (all services, internal TLS)
   mkInternalVhost = _name: svc: {
@@ -47,26 +61,13 @@ let
 
   internalVhosts = builtins.listToAttrs (lib.mapAttrsToList mkInternalVhost services);
   publicVhosts = builtins.listToAttrs (lib.mapAttrsToList mkPublicVhost externalServices) // {
-    # Root domain — static site (technomancer-dream) at /, with the
-    # vendored arcanesys-website preview mounted under /nixfleet.
-    # Both the directory and this handle_path block are temporary —
-    # remove them when the upstream pitch site (arcanesys.fr) is the
-    # canonical home.
     ${publicDomain} = {
       extraConfig = ''
         tls {
           dns cloudflare {env.CLOUDFLARE_API_TOKEN}
         }
-        redir /nixfleet /nixfleet/ permanent
-        handle_path /nixfleet/* {
-          root * ${previewSite}
-          file_server
-          encode gzip
-        }
-        handle {
-          root * /var/lib/technomancer-dream
-          file_server
-        }
+        root * ${apexSite}
+        file_server
       '';
     };
   };
@@ -110,10 +111,6 @@ lib.mkIf config.fleet.server.enable {
       user = "caddy";
       group = "caddy";
       mode = "0700";
-    }
-    {
-      directory = "/var/lib/technomancer-dream";
-      mode = "0755";
     }
   ];
 }

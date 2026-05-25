@@ -22,7 +22,7 @@ host.
 - **`modules/reverse-proxy/`** — Caddy with internal-CA TLS.
 - **`modules/lab-apps/`** — concrete service modules: AdGuard, Grafana,
   Loki, ntfy, Caddy, Atuin, Restic-server, Samba, Jellyfin, Immich,
-  Home Assistant, Homepage, Cloudflared, arcanesys-website-preview.
+  Home Assistant, Homepage, Cloudflared.
 
 ## Consumption
 
