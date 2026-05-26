@@ -189,6 +189,16 @@ SQL
         User = "fleet-dm";
         Group = "fleet-dm";
         StateDirectory = "fleet-dm";
+        # fleet schema migrations — idempotent, fast no-op when up to date.
+        # Must run on every start so version bumps pick up new migrations
+        # without operator intervention.
+        ExecStartPre = ''
+          ${cfg.package}/bin/fleet prepare db \
+            --mysql_address=127.0.0.1:${toString cfg.mysql.port} \
+            --mysql_username=${cfg.mysql.user} \
+            --mysql_database=${cfg.mysql.database} \
+            --no-prompt
+        '';
         ExecStart = ''
           ${cfg.package}/bin/fleet serve \
             --mysql_address=127.0.0.1:${toString cfg.mysql.port} \
