@@ -1,8 +1,14 @@
 # fleet-dm — osquery fleet manager server. Lab-only.
 #
-# Dedicated Postgres + Redis (separate ports/data dirs from any other lab
+# Dedicated MariaDB + Redis (separate ports/data dirs from any other lab
 # services), Caddy vhost with internal TLS at <domain>, tailnet-only by
 # consumer policy (consumer marks external=false in services.nix).
+#
+# fleet-dm is MySQL-only (no Postgres support upstream — server/datastore/mysql
+# is the sole datastore). MariaDB 10.5+ speaks the same wire protocol and
+# satisfies the Go driver, so we run a dedicated mariadbd instance bound to
+# 127.0.0.1 with skip-grant-tables-style trust auth — fleet-dm is the only
+# client, surface is localhost, the password adds no real security.
 {
   config,
   lib,
@@ -35,25 +41,23 @@ in
       description = "fleet-dm package. Pin in consumer if schema churn requires it.";
     };
 
-    postgres = {
+    mysql = {
       port = lib.mkOption {
         type = lib.types.port;
-        default = 5433;
+        default = 3307;
+        description = "Dedicated MariaDB port. Default 3307 leaves 3306 free for any shared lab MySQL.";
       };
       dataDir = lib.mkOption {
         type = lib.types.str;
-        default = "/var/lib/fleet-dm-postgres";
+        default = "/var/lib/fleet-dm-mysql";
       };
-      passwordFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = ''
-          Optional path to a file containing the fleet-dm Postgres password.
-          When null (default), postgres runs with trust auth on 127.0.0.1 only —
-          fleet-dm is the only client and the surface is localhost-bound, so the
-          password adds no real security. Provide a path if you want md5 auth
-          (e.g. when sharing the dedicated instance with another local client).
-        '';
+      database = lib.mkOption {
+        type = lib.types.str;
+        default = "fleet";
+      };
+      user = lib.mkOption {
+        type = lib.types.str;
+        default = "fleet";
       };
     };
 
@@ -69,51 +73,79 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # Dedicated Postgres for fleet-dm — separate from any shared lab Postgres.
-    systemd.services.fleet-dm-postgres = {
-      description = "PostgreSQL (dedicated for fleet-dm)";
+    # Dedicated MariaDB for fleet-dm. Custom systemd unit (not services.mysql
+    # which expects a single instance) so we can pin port/datadir/socket and
+    # keep this isolated from any future shared lab MySQL.
+    systemd.services.fleet-dm-mysql = {
+      description = "MariaDB (dedicated for fleet-dm)";
       after = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
       serviceConfig = {
-        Type = "notify";
-        User = "fleet-dm-postgres";
-        Group = "fleet-dm-postgres";
-        StateDirectory = "fleet-dm-postgres";
+        Type = "simple";
+        User = "fleet-dm-mysql";
+        Group = "fleet-dm-mysql";
+        StateDirectory = "fleet-dm-mysql";
         StateDirectoryMode = "0700";
-        # initdb on first boot, then run the daemon. PG_VERSION is postgres'
-        # canonical "data dir initialized" marker.
-        # Auth: trust for both host and local — postgres is bound to 127.0.0.1
-        # only and the fleet-dm service is the only legitimate client. No
-        # external attack surface ⇒ password adds no real security here.
-        ExecStartPre = pkgs.writeShellScript "fleet-dm-postgres-initdb" ''
+        # First boot: mariadb-install-db lays down the system tables, then
+        # ExecStartPost creates the fleet user + database (idempotent: marker
+        # file gates the bootstrap).
+        ExecStartPre = pkgs.writeShellScript "fleet-dm-mysql-install" ''
           set -eu
-          if [ ! -f ${cfg.postgres.dataDir}/PG_VERSION ]; then
-            ${pkgs.postgresql_16}/bin/initdb -D ${cfg.postgres.dataDir} \
-              --auth-host=trust --auth-local=trust \
-              --encoding=UTF8 --locale=C \
-              --username=fleet
-            cat >> ${cfg.postgres.dataDir}/postgresql.conf <<'EOF'
-
-# Managed by nixfleet-stack/modules/lab-apps/fleet-dm.nix.
-unix_socket_directories = '/tmp'
-listen_addresses = '127.0.0.1'
-EOF
+          if [ ! -d ${cfg.mysql.dataDir}/mysql ]; then
+            ${pkgs.mariadb}/bin/mariadb-install-db \
+              --datadir=${cfg.mysql.dataDir} \
+              --user=fleet-dm-mysql \
+              --auth-root-authentication-method=normal \
+              --skip-test-db
           fi
         '';
         ExecStart = ''
-          ${pkgs.postgresql_16}/bin/postgres \
-            -D ${cfg.postgres.dataDir} \
-            -p ${toString cfg.postgres.port} \
-            -k /tmp
+          ${pkgs.mariadb}/bin/mariadbd \
+            --datadir=${cfg.mysql.dataDir} \
+            --bind-address=127.0.0.1 \
+            --port=${toString cfg.mysql.port} \
+            --socket=/run/fleet-dm-mysql/mysqld.sock \
+            --pid-file=/run/fleet-dm-mysql/mysqld.pid \
+            --user=fleet-dm-mysql
         '';
+        # Bootstrap the database + user once. Idempotent: CREATE IF NOT EXISTS.
+        # Runs after mariadbd is accepting connections — small sleep is the
+        # pragmatic choice over mysqladmin ping in a loop.
+        ExecStartPost = pkgs.writeShellScript "fleet-dm-mysql-bootstrap" ''
+          set -eu
+          for i in $(seq 1 30); do
+            if ${pkgs.mariadb}/bin/mariadb \
+                --socket=/run/fleet-dm-mysql/mysqld.sock \
+                --user=root \
+                -e "SELECT 1" >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          ${pkgs.mariadb}/bin/mariadb \
+            --socket=/run/fleet-dm-mysql/mysqld.sock \
+            --user=root <<'SQL'
+CREATE DATABASE IF NOT EXISTS ${cfg.mysql.database}
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS '${cfg.mysql.user}'@'127.0.0.1' IDENTIFIED BY '';
+CREATE USER IF NOT EXISTS '${cfg.mysql.user}'@'localhost' IDENTIFIED BY '';
+GRANT ALL PRIVILEGES ON ${cfg.mysql.database}.* TO '${cfg.mysql.user}'@'127.0.0.1';
+GRANT ALL PRIVILEGES ON ${cfg.mysql.database}.* TO '${cfg.mysql.user}'@'localhost';
+FLUSH PRIVILEGES;
+SQL
+        '';
+        RuntimeDirectory = "fleet-dm-mysql";
+        RuntimeDirectoryMode = "0750";
+        Restart = "on-failure";
+        RestartSec = 5;
       };
     };
-    users.users.fleet-dm-postgres = {
+    users.users.fleet-dm-mysql = {
       isSystemUser = true;
-      group = "fleet-dm-postgres";
-      home = cfg.postgres.dataDir;
+      group = "fleet-dm-mysql";
+      home = cfg.mysql.dataDir;
     };
-    users.groups.fleet-dm-postgres = { };
+    users.groups.fleet-dm-mysql = { };
 
     # Dedicated Redis — cache-only, no persistence.
     systemd.services.fleet-dm-redis = {
@@ -145,11 +177,11 @@ EOF
     systemd.services.fleet-dm = {
       description = "fleet-dm (osquery fleet manager)";
       after = [
-        "fleet-dm-postgres.service"
+        "fleet-dm-mysql.service"
         "fleet-dm-redis.service"
       ];
       requires = [
-        "fleet-dm-postgres.service"
+        "fleet-dm-mysql.service"
         "fleet-dm-redis.service"
       ];
       wantedBy = [ "multi-user.target" ];
@@ -157,12 +189,11 @@ EOF
         User = "fleet-dm";
         Group = "fleet-dm";
         StateDirectory = "fleet-dm";
-        EnvironmentFile = lib.mkIf (cfg.postgres.passwordFile != null) cfg.postgres.passwordFile;
         ExecStart = ''
           ${cfg.package}/bin/fleet serve \
-            --mysql_address=127.0.0.1:${toString cfg.postgres.port} \
-            --mysql_username=fleet \
-            --mysql_database=fleet \
+            --mysql_address=127.0.0.1:${toString cfg.mysql.port} \
+            --mysql_username=${cfg.mysql.user} \
+            --mysql_database=${cfg.mysql.database} \
             --redis_address=127.0.0.1:${toString cfg.redis.port} \
             --server_address=127.0.0.1:${toString cfg.port} \
             --server_tls=false
@@ -190,10 +221,10 @@ EOF
         {
           directories = [
             {
-              directory = cfg.postgres.dataDir;
-              user = "fleet-dm-postgres";
-              group = "fleet-dm-postgres";
-              mode = "0750";
+              directory = cfg.mysql.dataDir;
+              user = "fleet-dm-mysql";
+              group = "fleet-dm-mysql";
+              mode = "0700";
             }
             "/var/lib/fleet-dm"
           ];
