@@ -10,11 +10,6 @@
     agenix.url = "github:ryantm/agenix";
     agenix.inputs.nixpkgs.follows = "nixpkgs";
 
-    attic = {
-      url = "github:booxter/attic/newer-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     buildbot-nix.url = "github:nix-community/buildbot-nix";
     buildbot-nix.inputs.nixpkgs.follows = "nixpkgs";
   };
@@ -51,7 +46,6 @@
         coordinator-meta = ./modules/coordinator;
         cache-server-harmonia = ./modules/cache-server/harmonia;
         cache-server-garage = ./modules/cache-server/garage;
-        cache-server-attic = ./modules/cache-server/attic-server;
         ci-runner-buildbot = ./modules/ci-runner/buildbot-nix;
         ci-runner-forgejo = ./modules/ci-runner/forgejo-actions;
         ci-runner-hercules = ./modules/ci-runner/hercules;
@@ -78,7 +72,6 @@
               ./modules/coordinator
               ./modules/cache-server/harmonia
               ./modules/cache-server/garage
-              ./modules/cache-server/attic-server
               ./modules/ci-runner/buildbot-nix
               ./modules/ci-runner/forgejo-actions
               ./modules/ci-runner/hercules

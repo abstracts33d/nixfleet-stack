@@ -15,7 +15,6 @@ in
   imports = [
     ./options.nix
     ../forge/forgejo
-    ../cache-server/attic-server
     ../ci-runner/forgejo-actions
     ../reverse-proxy
     ../backup-server
@@ -24,7 +23,6 @@ in
 
   config = lib.mkIf cfg.enable {
     nixfleet.forge.enable = lib.mkDefault true;
-    nixfleet.atticServer.enable = lib.mkDefault true;
     nixfleet.ciRunner.forgejoActions.enable = lib.mkDefault true;
     nixfleet.reverseProxy.enable = lib.mkDefault true;
     nixfleet.backupServer.enable = lib.mkDefault true;
