@@ -55,6 +55,7 @@
         backup-server = ./modules/backup-server;
         monitoring-server = ./modules/monitoring-server;
         reverse-proxy = ./modules/reverse-proxy;
+        osquery-agent = ./modules/observability/osquery-agent;
 
         # Aggregator — every lab-stack module + external buildbot-nix modules.
         lab-stack =
@@ -81,6 +82,9 @@
               # Monitoring-server scrape config (fleet-specific scrape jobs)
               ./modules/monitoring-server/scrape-config.nix
 
+              # Observability — per-host osquery agent for compliance + ad-hoc fleet queries.
+              ./modules/observability/osquery-agent
+
               # Lab-apps — concrete services
               ./modules/lab-apps/base.nix
               ./modules/lab-apps/adguard.nix
@@ -98,6 +102,10 @@
               ./modules/lab-apps/cloudflared.nix
             ];
           };
+      };
+
+      flake.darwinModules = {
+        osquery-agent = ./modules/observability/osquery-agent/darwin.nix;
       };
     };
 }
