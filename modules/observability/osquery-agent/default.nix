@@ -20,26 +20,35 @@ let
     ''}
   '';
 
+  # Plugin-loading + TLS connection flags MUST be CLI flags (--flagfile).
+  # osquery silently ignores these when set inside the JSON config file —
+  # the plugins they select are loaded before the config is read.
+  # services.osquery.flags renders them as CLI args to osqueryd.
+  tlsFlags = {
+    tls_hostname = lib.removePrefix "https://" (lib.removePrefix "http://" cfg.fleetDmUrl);
+    enroll_secret_path = toString cfg.enrollSecretFile;
+    enroll_tls_endpoint = "/api/v1/osquery/enroll";
+    config_plugin = "tls";
+    config_tls_endpoint = "/api/v1/osquery/config";
+    config_tls_refresh = "60";
+    logger_plugin = "tls,filesystem";
+    logger_tls_endpoint = "/api/v1/osquery/log";
+    logger_tls_period = "10";
+    logger_path = builtins.dirOf cfg.logForwarding.lokiFile;
+    disable_distributed = "false";
+    distributed_plugin = "tls";
+    distributed_tls_read_endpoint = "/api/v1/osquery/distributed/read";
+    distributed_tls_write_endpoint = "/api/v1/osquery/distributed/write";
+    distributed_interval = "10";
+    host_identifier = "specified";
+    specified_identifier = config.networking.hostName;
+  };
+
+  # Runtime-only options (osqueryd reads from config file): pack registration
+  # + global tunables that don't gate plugin loading.
   configJson = pkgs.writeText "osquery.conf" (builtins.toJSON {
     options = {
-      tls_hostname = lib.removePrefix "https://" (lib.removePrefix "http://" cfg.fleetDmUrl);
-      enroll_secret_path = toString cfg.enrollSecretFile;
-      enroll_tls_endpoint = "/api/v1/osquery/enroll";
-      config_plugin = "tls";
-      config_tls_endpoint = "/api/v1/osquery/config";
-      config_tls_refresh = "60";
-      logger_plugin = "tls,filesystem";
-      logger_tls_endpoint = "/api/v1/osquery/log";
-      logger_tls_period = "10";
-      logger_path = builtins.dirOf cfg.logForwarding.lokiFile;
-      disable_distributed = false;
-      distributed_plugin = "tls";
-      distributed_tls_read_endpoint = "/api/v1/osquery/distributed/read";
-      distributed_tls_write_endpoint = "/api/v1/osquery/distributed/write";
-      distributed_interval = 10;
       schedule_splay_percent = 10;
-      host_identifier = "specified";
-      specified_identifier = config.networking.hostName;
     };
     packs =
       {
@@ -59,7 +68,7 @@ in
     services.osquery = {
       enable = true;
       package = pkgs.osquery;
-      flags = {
+      flags = tlsFlags // {
         config_path = "${configJson}";
       };
     };
