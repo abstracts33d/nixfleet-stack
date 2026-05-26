@@ -56,6 +56,7 @@
         monitoring-server = ./modules/monitoring-server;
         reverse-proxy = ./modules/reverse-proxy;
         osquery-agent = ./modules/observability/osquery-agent;
+        fleet-dm = ./modules/lab-apps/fleet-dm.nix;
 
         # Aggregator — every lab-stack module + external buildbot-nix modules.
         lab-stack =
@@ -84,6 +85,9 @@
 
               # Observability — per-host osquery agent for compliance + ad-hoc fleet queries.
               ./modules/observability/osquery-agent
+
+              # fleet-dm — server for the osquery agents above. Lab-only.
+              ./modules/lab-apps/fleet-dm.nix
 
               # Lab-apps — concrete services
               ./modules/lab-apps/base.nix
