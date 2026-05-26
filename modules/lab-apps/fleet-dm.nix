@@ -72,6 +72,24 @@ in
         User = "fleet-dm-postgres";
         Group = "fleet-dm-postgres";
         StateDirectory = "fleet-dm-postgres";
+        StateDirectoryMode = "0700";
+        # initdb on first boot, then run the daemon. PG_VERSION is postgres'
+        # canonical "data dir initialized" marker.
+        ExecStartPre = pkgs.writeShellScript "fleet-dm-postgres-initdb" ''
+          set -eu
+          if [ ! -f ${cfg.postgres.dataDir}/PG_VERSION ]; then
+            ${pkgs.postgresql_16}/bin/initdb -D ${cfg.postgres.dataDir} \
+              --auth-host=md5 --auth-local=trust \
+              --encoding=UTF8 --locale=C \
+              --username=fleet
+            cat >> ${cfg.postgres.dataDir}/postgresql.conf <<'EOF'
+
+# Managed by nixfleet-stack/modules/lab-apps/fleet-dm.nix.
+unix_socket_directories = '/tmp'
+listen_addresses = '127.0.0.1'
+EOF
+          fi
+        '';
         ExecStart = ''
           ${pkgs.postgresql_16}/bin/postgres \
             -D ${cfg.postgres.dataDir} \
