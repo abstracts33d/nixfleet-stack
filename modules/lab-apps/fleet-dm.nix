@@ -45,8 +45,15 @@ in
         default = "/var/lib/fleet-dm-postgres";
       };
       passwordFile = lib.mkOption {
-        type = lib.types.str;
-        description = "Path to a file containing the fleet-dm Postgres password.";
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = ''
+          Optional path to a file containing the fleet-dm Postgres password.
+          When null (default), postgres runs with trust auth on 127.0.0.1 only —
+          fleet-dm is the only client and the surface is localhost-bound, so the
+          password adds no real security. Provide a path if you want md5 auth
+          (e.g. when sharing the dedicated instance with another local client).
+        '';
       };
     };
 
@@ -75,11 +82,14 @@ in
         StateDirectoryMode = "0700";
         # initdb on first boot, then run the daemon. PG_VERSION is postgres'
         # canonical "data dir initialized" marker.
+        # Auth: trust for both host and local — postgres is bound to 127.0.0.1
+        # only and the fleet-dm service is the only legitimate client. No
+        # external attack surface ⇒ password adds no real security here.
         ExecStartPre = pkgs.writeShellScript "fleet-dm-postgres-initdb" ''
           set -eu
           if [ ! -f ${cfg.postgres.dataDir}/PG_VERSION ]; then
             ${pkgs.postgresql_16}/bin/initdb -D ${cfg.postgres.dataDir} \
-              --auth-host=md5 --auth-local=trust \
+              --auth-host=trust --auth-local=trust \
               --encoding=UTF8 --locale=C \
               --username=fleet
             cat >> ${cfg.postgres.dataDir}/postgresql.conf <<'EOF'
@@ -147,10 +157,12 @@ EOF
         User = "fleet-dm";
         Group = "fleet-dm";
         StateDirectory = "fleet-dm";
-        EnvironmentFile = cfg.postgres.passwordFile;
+        EnvironmentFile = lib.mkIf (cfg.postgres.passwordFile != null) cfg.postgres.passwordFile;
         ExecStart = ''
           ${cfg.package}/bin/fleet serve \
             --mysql_address=127.0.0.1:${toString cfg.postgres.port} \
+            --mysql_username=fleet \
+            --mysql_database=fleet \
             --redis_address=127.0.0.1:${toString cfg.redis.port} \
             --server_address=127.0.0.1:${toString cfg.port} \
             --server_tls=false
