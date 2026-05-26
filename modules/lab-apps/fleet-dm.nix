@@ -45,7 +45,7 @@ in
       port = lib.mkOption {
         type = lib.types.port;
         default = 3307;
-        description = "Dedicated MariaDB port. Default 3307 leaves 3306 free for any shared lab MySQL.";
+        description = "Dedicated MySQL 8 port. Default 3307 leaves 3306 free for any future shared lab MySQL.";
       };
       dataDir = lib.mkOption {
         type = lib.types.str;
@@ -229,11 +229,13 @@ SQL
     };
     users.groups.fleet-dm = { };
 
-    # Caddy vhost — internal TLS, tailnet-only (external=false in consumer).
-    services.caddy.virtualHosts.${cfg.domain}.extraConfig = ''
-      tls internal
-      reverse_proxy 127.0.0.1:${toString cfg.port}
-    '';
+    # Caddy vhost is auto-built by lab-apps/caddy.nix from the consumer's
+    # _data/services.nix entry (subdomain="fleet", external=false → tailnet
+    # only). Declaring it here too caused a multi-definition merge on
+    # `extraConfig` (lib.types.lines concatenates), producing an invalid
+    # Caddyfile with duplicated `tls`/`reverse_proxy` directives — Caddy
+    # silently kept the old config across activations because reloads
+    # failed parse.
 
     # Persistence (impermanence) for state dirs.
     environment.persistence."/persist" =

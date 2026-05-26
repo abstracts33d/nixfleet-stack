@@ -1,6 +1,11 @@
 # osquery agent — nix-darwin variant. nix-darwin has no services.osquery
 # wrapper, so we drive osqueryd directly via launchd.
 #
+# Flag handling differs from the NixOS variant: there's no upstream module
+# pinning logger_path/database_path/pidfile read-only, so we pass --logger_path
+# and --pidfile directly. On NixOS the upstream module sets those itself
+# (see default.nix top-of-file comment).
+#
 # TCC NOTE: first activation on a Darwin host requires the operator to grant
 # osquery the appropriate permissions in System Settings → Privacy & Security.
 # Until that's done, several tables (file_events on /etc, fs metadata on

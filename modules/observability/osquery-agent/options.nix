@@ -7,7 +7,14 @@
     fleetDmUrl = lib.mkOption {
       type = lib.types.str;
       example = "https://fleet.lab.internal";
-      description = "fleet-dm endpoint URL. On lab itself, override to http://localhost:<port>.";
+      description = ''
+        fleet-dm endpoint URL. Must be HTTPS — osquery's TLS plugin
+        always negotiates TLS regardless of URL scheme. The lab host
+        uses the same value as every other host (Caddy fronts fleet-dm
+        with `tls internal`); plaintext bypass via http://localhost
+        produced "Request error: packet length too long" because
+        osquery sends a TLS Client Hello into a plain HTTP listener.
+      '';
     };
 
     enrollSecretFile = lib.mkOption {
