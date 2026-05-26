@@ -61,8 +61,6 @@ in
       package = pkgs.osquery;
       flags = {
         config_path = "${configJson}";
-        pidfile = "/var/run/osqueryd.pidfile";
-        logger_path = builtins.dirOf cfg.logForwarding.lokiFile;
       };
     };
 
