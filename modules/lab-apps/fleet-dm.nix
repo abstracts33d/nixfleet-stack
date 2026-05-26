@@ -1,14 +1,14 @@
 # fleet-dm — osquery fleet manager server. Lab-only.
 #
-# Dedicated MariaDB + Redis (separate ports/data dirs from any other lab
+# Dedicated MySQL 8 + Redis (separate ports/data dirs from any other lab
 # services), Caddy vhost with internal TLS at <domain>, tailnet-only by
 # consumer policy (consumer marks external=false in services.nix).
 #
-# fleet-dm is MySQL-only (no Postgres support upstream — server/datastore/mysql
-# is the sole datastore). MariaDB 10.5+ speaks the same wire protocol and
-# satisfies the Go driver, so we run a dedicated mariadbd instance bound to
-# 127.0.0.1 with skip-grant-tables-style trust auth — fleet-dm is the only
-# client, surface is localhost, the password adds no real security.
+# fleet-dm officially supports MySQL 8.x only — MariaDB rejected one of the
+# packaged schema migrations (TIMESTAMP(6)+CURRENT_TIMESTAMP MODIFY COLUMN
+# syntax MariaDB parses differently). Bound to 127.0.0.1 with empty-password
+# trust auth — fleet-dm is the only client, surface is localhost, the
+# password adds no real security at the loopback boundary.
 {
   config,
   lib,
@@ -73,11 +73,11 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # Dedicated MariaDB for fleet-dm. Custom systemd unit (not services.mysql
+    # Dedicated MySQL 8 for fleet-dm. Custom systemd unit (not services.mysql
     # which expects a single instance) so we can pin port/datadir/socket and
     # keep this isolated from any future shared lab MySQL.
     systemd.services.fleet-dm-mysql = {
-      description = "MariaDB (dedicated for fleet-dm)";
+      description = "MySQL 8 (dedicated for fleet-dm)";
       after = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
       serviceConfig = {
@@ -86,35 +86,45 @@ in
         Group = "fleet-dm-mysql";
         StateDirectory = "fleet-dm-mysql";
         StateDirectoryMode = "0700";
-        # First boot: mariadb-install-db lays down the system tables, then
-        # ExecStartPost creates the fleet user + database (idempotent: marker
-        # file gates the bootstrap).
+        # First boot: mysqld --initialize-insecure lays down the system schema
+        # with a passwordless root (safe on a 127.0.0.1-only socket).
+        # ExecStartPost then creates the fleet user + database.
+        #
+        # Migration guard: an earlier revision of this module initialized the
+        # data dir as MariaDB. MySQL 8 refuses to start on a MariaDB layout
+        # (different system tables + InnoDB metadata), so we detect the
+        # MariaDB-specific aria_log_control file and wipe before re-init.
+        # Safe because fleet's schema migrations never completed under
+        # MariaDB — there's no real data on disk.
         ExecStartPre = pkgs.writeShellScript "fleet-dm-mysql-install" ''
           set -eu
+          if [ -f ${cfg.mysql.dataDir}/aria_log_control ]; then
+            echo "fleet-dm-mysql: detected MariaDB layout; wiping (no fleet data ever landed)" >&2
+            ${pkgs.coreutils}/bin/find ${cfg.mysql.dataDir} -mindepth 1 -delete
+          fi
           if [ ! -d ${cfg.mysql.dataDir}/mysql ]; then
-            ${pkgs.mariadb}/bin/mariadb-install-db \
+            ${pkgs.mysql80}/bin/mysqld \
+              --initialize-insecure \
               --datadir=${cfg.mysql.dataDir} \
-              --user=fleet-dm-mysql \
-              --auth-root-authentication-method=normal \
-              --skip-test-db
+              --user=fleet-dm-mysql
           fi
         '';
         ExecStart = ''
-          ${pkgs.mariadb}/bin/mariadbd \
+          ${pkgs.mysql80}/bin/mysqld \
             --datadir=${cfg.mysql.dataDir} \
             --bind-address=127.0.0.1 \
             --port=${toString cfg.mysql.port} \
             --socket=/run/fleet-dm-mysql/mysqld.sock \
             --pid-file=/run/fleet-dm-mysql/mysqld.pid \
+            --mysqlx=OFF \
             --user=fleet-dm-mysql
         '';
-        # Bootstrap the database + user once. Idempotent: CREATE IF NOT EXISTS.
-        # Runs after mariadbd is accepting connections — small sleep is the
-        # pragmatic choice over mysqladmin ping in a loop.
+        # Bootstrap the database + user. Idempotent: CREATE IF NOT EXISTS.
+        # Poll the socket until mysqld accepts connections (typically <5s).
         ExecStartPost = pkgs.writeShellScript "fleet-dm-mysql-bootstrap" ''
           set -eu
           for i in $(seq 1 30); do
-            if ${pkgs.mariadb}/bin/mariadb \
+            if ${pkgs.mysql80}/bin/mysql \
                 --socket=/run/fleet-dm-mysql/mysqld.sock \
                 --user=root \
                 -e "SELECT 1" >/dev/null 2>&1; then
@@ -122,7 +132,7 @@ in
             fi
             sleep 1
           done
-          ${pkgs.mariadb}/bin/mariadb \
+          ${pkgs.mysql80}/bin/mysql \
             --socket=/run/fleet-dm-mysql/mysqld.sock \
             --user=root <<'SQL'
 CREATE DATABASE IF NOT EXISTS ${cfg.mysql.database}
