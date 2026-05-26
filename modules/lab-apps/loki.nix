@@ -1,4 +1,3 @@
-# Loki — log aggregator for vector clients (Tailnet-only).
 {
   config,
   lib,
@@ -40,7 +39,7 @@ lib.mkIf config.fleet.server.enable {
           };
         }
       ];
-      # 14-day retention; matches the homelab's general signal-vs-noise.
+      # 14-day retention (336h).
       limits_config = {
         retention_period = "336h";
         allow_structured_metadata = true;

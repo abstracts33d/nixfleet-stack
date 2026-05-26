@@ -56,11 +56,7 @@
         monitoring-server = ./modules/monitoring-server;
         reverse-proxy = ./modules/reverse-proxy;
 
-        # Aggregator — every lab-stack module at once. Downstream
-        # imports `nixfleet-stack.nixosModules.lab-stack` to get the
-        # whole stack. External nixosModules required by underlying
-        # modules (buildbot-nix master+worker) are pulled in here so
-        # consumers don't have to wire them separately.
+        # Aggregator — every lab-stack module + external buildbot-nix modules.
         lab-stack =
           { ... }:
           {

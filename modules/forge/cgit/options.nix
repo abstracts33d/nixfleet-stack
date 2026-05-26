@@ -1,9 +1,3 @@
-# cgit forge scope — option declarations.
-#
-# Read-only HTTP UI for git repositories, typically paired with the
-# `gitolite` scope (cgit scans gitolite's repository directory). The
-# nginx vhost binds loopback; Caddy fronts the public hostname via
-# `_data/services.nix` (service "cgit" → https://git2.lab.internal).
 { lib, ... }:
 let
   inherit (lib) types;

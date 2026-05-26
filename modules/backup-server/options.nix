@@ -1,4 +1,3 @@
-# Backup-server scope (Restic REST) — option declarations.
 { lib, ... }:
 let
   inherit (lib) types;

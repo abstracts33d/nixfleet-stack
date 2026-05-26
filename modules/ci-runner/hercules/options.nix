@@ -1,4 +1,3 @@
-# Hercules CI agent — option declarations.
 { lib, ... }:
 let
   inherit (lib) types;

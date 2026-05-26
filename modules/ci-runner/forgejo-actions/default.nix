@@ -1,5 +1,3 @@
-# Forgejo Actions self-hosted runner driver. Sibling of `hercules` driver
-# under `nixfleet.ciRunner.*`; both can coexist on one host.
 {
   config,
   lib,
@@ -36,12 +34,9 @@ in
       };
     };
 
-    # `.path` is additive — merges packages into PATH without clobbering
-    # HOME/LOCALE_ARCHIVE/TZDIR (which `serviceConfig.Environment = PATH=...`
-    # would replace, breaking the runner at activation). Consumers extend
-    # via `systemd.services.gitea-runner-nixfleet.path = [ ... ]`.
-    # `after`/`wants` on local forgejo prevents a rebuild race where runner
-    # boots before forgejo accepts connections and exits 1.
+    # Use .path (additive) instead of serviceConfig.Environment=PATH= which
+    # would clobber HOME/LOCALE_ARCHIVE/TZDIR. after/wants gates the
+    # rebuild race where runner exits 1 before forgejo accepts connections.
     systemd.services.gitea-runner-nixfleet = {
       path = with pkgs; [
         config.nix.package
@@ -58,12 +53,9 @@ in
         curl
         openssl
       ];
-      # Static user instead of upstream DynamicUser=true: DynamicUser
-      # idmaps StateDirectory with `noexec`, fatal for `runs-on: native`
-      # compile+execute workflows. PrivateTmp off: upstream's 1.6 GB tmpfs
-      # hits ENOSPC during `attic push` of multi-GB nars + nixfleet-release
-      # tempfiles. NB: DynamicUser=true ignores explicit PrivateTmp=false
-      # override (implicit always wins) — keep static-user.
+      # Static user: DynamicUser idmaps StateDir noexec (breaks `runs-on: native`)
+      # and forces a 1.6GB tmpfs that ENOSPCs on `attic push` of multi-GB nars
+      # (DynamicUser=true ignores explicit PrivateTmp=false; only static user works).
       serviceConfig = {
         DynamicUser = lib.mkForce false;
         User = lib.mkForce "gitea-runner";
@@ -81,10 +73,8 @@ in
           wants = [ "forgejo.service" ];
         };
 
-    # DynamicUser=true leaves /var/lib/gitea-runner as a symlink to
-    # /var/lib/private/gitea-runner. Toggling to static user trips
-    # StateDirectory setup with status=238/STATE_DIRECTORY. Strip stale
-    # symlink before activation; idempotent (regular dirs untouched).
+    # Strip stale /var/lib/private/* symlink left by prior DynamicUser=true
+    # (else static-user activation fails status=238/STATE_DIRECTORY). Idempotent.
     system.activationScripts.nixfleet-gitea-runner-statedir = ''
       if [ -L /var/lib/gitea-runner ]; then
         rm /var/lib/gitea-runner

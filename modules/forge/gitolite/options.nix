@@ -1,12 +1,3 @@
-# Gitolite forge scope — option declarations.
-#
-# Sibling of `forgejo` under `nixfleet.forge.*` family. Gitolite is the
-# Nix-aligned end of the forge spectrum: SSH-only, declarative repos +
-# ACLs via a gitolite-admin repo, no web app. Pairs with the `cgit`
-# scope for a read-only HTTPS browser, both fronted by Caddy.
-#
-# See docs/specs/forge-gitolite-migration.md for the broader rationale
-# and the 5-phase plan to retire Forgejo in favour of this stack.
 { lib, ... }:
 let
   inherit (lib) types;

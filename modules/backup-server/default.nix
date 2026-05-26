@@ -1,4 +1,3 @@
-# Backup-server scope — Restic REST server.
 {
   config,
   lib,

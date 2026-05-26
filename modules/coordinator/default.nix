@@ -1,7 +1,6 @@
-# Coordinator meta-scope. Imports the full coordinator bundle and
-# defaults their enable flags on when nixfleet.coordinator.enable is
-# set. Individual sub-scope configuration stays at the sub-scope's own
-# option path — this module does not pass options through.
+# Meta-scope: imports the coordinator bundle and defaults their enable flags
+# when nixfleet.coordinator.enable is set. Configure sub-scopes at their own
+# option path; this module does not pass options through.
 {
   config,
   inputs,
@@ -28,15 +27,11 @@ in
     nixfleet.backupServer.enable = lib.mkDefault true;
     nixfleet.keyslots.tpm.enable = lib.mkDefault true;
 
-    # Bundle C (nixfleet#41): the issuance CA keyslot lives on every
-    # coordinator host alongside the legacy ciReleaseKey (provisioned
-    # via `nixfleet.keyslots.tpm.handle = "0x81010001"` set in
-    # flake.nix). Distinct persistent handle, secure-by-default PCR 0
-    # policy. The systemd oneshot
+    # Bundle C (nixfleet#41): issuance CA keyslot, distinct handle from the
+    # legacy ciReleaseKey (0x81010001 in flake.nix), PCR 0 policy.
     # nixfleet-tpm-keyslot-provision-issuanceCA exports
-    # /var/lib/nixfleet-tpm-keyslot/issuanceCA/pubkey.raw at first
-    # boot; the operator then runs `nixfleet-cp-bootstrap` to mint
-    # the offline fleet root + issuance CA cert from that pubkey.
+    # /var/lib/nixfleet-tpm-keyslot/issuanceCA/pubkey.raw at first boot;
+    # operator then runs `nixfleet-cp-bootstrap`.
     nixfleet.keyslots.tpm.keys.issuanceCA = {
       handle = "0x81010002";
       algorithm = "ecdsa-p256";

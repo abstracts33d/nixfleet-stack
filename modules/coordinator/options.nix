@@ -1,10 +1,3 @@
-# Coordinator meta-scope — option declarations.
-#
-# Thin facade over the individual scopes (forge, ci-runner,
-# reverse-proxy, backup-server, tpm-keyslot). Setting
-# nixfleet.coordinator.enable = true cascades mkDefault enable flags to
-# the sub-scopes; the consumer still configures each sub-scope through
-# its own option path (nixfleet.forge.*, nixfleet.ciRunner.*, ...).
 { lib, ... }:
 {
   options.nixfleet.coordinator = {

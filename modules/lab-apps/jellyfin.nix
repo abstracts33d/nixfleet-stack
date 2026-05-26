@@ -1,5 +1,4 @@
-# Jellyfin media server — streams to TVs, phones, browsers (server only).
-# Libraries configured via web UI on first launch (see docs/manual-setup.md).
+# Libraries configured via web UI on first launch.
 {
   config,
   lib,
@@ -21,7 +20,6 @@ in
       openFirewall = true;
     };
 
-    # Mount media drive (ext4, labeled "media") for Jellyfin + Samba
     fileSystems."/srv/media" = {
       device = "/dev/disk/by-label/media";
       fsType = "ext4";

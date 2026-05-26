@@ -1,4 +1,3 @@
-# Forge scope — option declarations.
 { lib, ... }:
 let
   inherit (lib) types;

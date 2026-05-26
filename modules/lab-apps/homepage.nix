@@ -1,15 +1,11 @@
-# Homepage — service dashboard for all lab services (server only).
-# Catppuccin Macchiato themed. Fully declarative.
-# API keys for widgets managed via agenix (homepage-env secret).
+# Catppuccin Macchiato dashboard; widget API keys come from homepage-env secret.
 {
   config,
   lib,
   ...
 }:
 lib.mkIf config.fleet.server.enable {
-  # Static user — homepage uses DynamicUser by default, which conflicts with
-  # impermanence (persist creates the dir before the transient user exists).
-  # Static user ensures correct ownership at boot time.
+  # DynamicUser breaks impermanence: persist dir created before transient user exists.
   users.users.homepage-dashboard = {
     isSystemUser = true;
     group = "homepage-dashboard";
@@ -205,7 +201,6 @@ lib.mkIf config.fleet.server.enable {
     '';
   };
 
-  # Disable DynamicUser — use the static user declared above.
   systemd.services.homepage-dashboard.serviceConfig.DynamicUser = lib.mkForce false;
 
   nixfleet.persistence.directories = [

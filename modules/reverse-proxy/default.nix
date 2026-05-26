@@ -1,4 +1,3 @@
-# Reverse-proxy scope — Caddy with fleet-friendly TLS defaults.
 {
   config,
   lib,
@@ -68,8 +67,7 @@ in
       }
     ];
 
-    # Optional: export Caddy's internal CA root to a stable path so
-    # downstream fleet hosts can import it into their trust bundle.
+    # Export Caddy internal-CA root to a stable path for downstream trust bundles.
     systemd.services.nixfleet-reverse-proxy-ca-export =
       lib.mkIf (cfg.internalCa.exportCertFile != null)
         {

@@ -1,8 +1,5 @@
-# Forgejo git forge scope.
-#
-# HTTP listens on loopback by default — consumer wires the reverse
-# proxy (Caddy, nginx, ...). SSH binds a separate port (222 default)
-# so the host's OpenSSH keeps :22.
+# HTTP binds loopback (consumer fronts reverse proxy); SSH uses :222 by default
+# to leave host OpenSSH on :22.
 {
   config,
   lib,
@@ -34,9 +31,7 @@ in
           SSH_PORT = cfg.ssh.port;
           SSH_LISTEN_HOST = cfg.ssh.listenHost;
           START_SSH_SERVER = cfg.ssh.enable;
-          # Magic string Forgejo matches on inbound SSH (not a system user),
-          # so clients can use `git@<host>` per Forgejo/Gitea/GitHub/GitLab
-          # convention. Override NixOS's service-user-as-SSH-username default.
+          # Magic string for inbound SSH (not a system user); enables git@<host> URLs.
           BUILTIN_SSH_SERVER_USER = cfg.ssh.user;
           SSH_USER = cfg.ssh.user;
           LANDING_PAGE = "login";
@@ -62,9 +57,8 @@ in
       };
     };
 
-    # Bootstrap admin + access token via CLI on first start. SSH-key and
-    # repo declaration go through the HTTP API (stable across versions);
-    # Forgejo LTS 11 has no `admin user add-ssh-key` CLI subcommand.
+    # Bootstrap admin + access token via CLI; ssh-keys/repos go through HTTP API
+    # (Forgejo LTS 11 has no `admin user add-ssh-key` CLI).
     systemd.services.forgejo = lib.mkIf (cfg.admin.userFile != null) {
       path = [
         pkgs.curl
@@ -86,13 +80,12 @@ in
           fi
         fi
 
-        # Re-read admin_user for downstream steps when the marker branch skipped.
+        # Re-read admin_user when marker branch skipped above.
         if [ -z "$admin_user" ] && [ -r ${cfg.admin.userFile} ]; then
           IFS=: read -r admin_user _ _ < ${cfg.admin.userFile}
         fi
 
-        # Bootstrap API token, generated once and reused by ssh-keys + repos
-        # oneshots. forgejo:forgejo 0600.
+        # API token generated once, reused by ssh-keys + repos oneshots.
         token_file=${cfg.dataDir}/.nixfleet-bootstrap-token
         if [ -n "$admin_user" ] && [ ! -f "$token_file" ]; then
           # CLI prints "Access token was successfully created: <40-hex>".
@@ -107,13 +100,11 @@ in
           fi
         fi
 
-        # sshKeyFiles registration lives in forgejo-ssh-keys.service: HTTP
-        # listener only comes up after preStart returns.
+        # SSH-key registration deferred to forgejo-ssh-keys.service (HTTP not up yet).
       '';
     };
 
-    # Admin SSH-key registration. Separate unit because HTTP isn't up
-    # during forgejo.service preStart. Gated on marker + token + HTTP probe.
+    # Separate unit: HTTP isn't bound during forgejo.service preStart.
     systemd.services.forgejo-ssh-keys = lib.mkIf (cfg.admin.sshKeyFiles != [ ]) {
       description = "Declarative Forgejo admin SSH key registration";
       after = [ "forgejo.service" ];
@@ -135,9 +126,7 @@ in
       script = ''
         set -u
 
-        # Bounded wait for marker + token + HTTP-ready. `After=forgejo.service`
-        # is insufficient: Type=simple goes active at ExecStart spawn, before
-        # the HTTP socket binds.
+        # After=forgejo.service insufficient (Type=simple active before HTTP binds).
         waited=0
         while [ ! -f ${cfg.dataDir}/.nixfleet-admin-created ] \
            || [ ! -f ${cfg.dataDir}/.nixfleet-bootstrap-token ] \
@@ -158,7 +147,7 @@ in
             key_content="$(cat ${keyFile})"
             if [ -n "$key_content" ]; then
               echo "forge-ssh-keys: registering ${keyFile} for $admin_user" >&2
-              # 201 Created / 422 duplicate fingerprint both = ok.
+              # 201 (created) / 422 (duplicate fingerprint) both = ok.
               body=$(jq -nc \
                 --arg title "nixfleet-bootstrap-$(basename ${keyFile} .pub)" \
                 --arg key "$key_content" \
@@ -180,8 +169,7 @@ in
       '';
     };
 
-    # Repository pre-creation via HTTP API (no `admin repo create` CLI on
-    # LTS 11). Same gating as ssh-keys.
+    # HTTP API (no `admin repo create` CLI on LTS 11). Same gating as ssh-keys.
     # TODO(v2): pullMirror support (upstream URL + auth).
     systemd.services.forgejo-repositories = lib.mkIf (cfg.repositories != [ ]) {
       description = "Declarative Forgejo repository pre-creation";
@@ -222,8 +210,7 @@ in
             echo "forge-repositories: ${repo.owner}/${repo.name} already exists, skipping" >&2
           else
             echo "forge-repositories: creating ${repo.owner}/${repo.name}" >&2
-            # 201 Created / 422 duplicate both = ok (on-disk check should
-            # have caught duplicates first).
+            # 201 / 422 both = ok (on-disk check should have caught duplicates).
             body=$(jq -nc \
               --arg name ${lib.escapeShellArg repo.name} \
               --arg desc ${lib.escapeShellArg repo.description} \
@@ -244,9 +231,8 @@ in
       '';
     };
 
-    # Forgejo's SSH server binds as unprivileged user; NixOS sets
-    # NoNewPrivileges=true, blocking CAP_NET_BIND_SERVICE. Lower the
-    # unprivileged-port-start sysctl instead of fighting caps.
+    # NixOS sets NoNewPrivileges=true, blocking CAP_NET_BIND_SERVICE; lower
+    # ip_unprivileged_port_start instead of fighting caps.
     boot.kernel.sysctl = lib.mkIf (cfg.ssh.enable && cfg.ssh.port < 1024) {
       "net.ipv4.ip_unprivileged_port_start" = cfg.ssh.port;
     };
@@ -264,9 +250,8 @@ in
       }
     ];
 
-    # forgejo-secrets.service bind-mounts stateDir/custom rw; on fresh
-    # stateDir (first boot / bare install) the subdir is missing and
-    # namespace setup fails with status=226/NAMESPACE.
+    # forgejo-secrets.service bind-mounts stateDir/custom rw; missing on first
+    # boot fails namespace setup with status=226/NAMESPACE.
     systemd.tmpfiles.rules = [
       "d ${cfg.dataDir}/custom 0750 forgejo forgejo - -"
     ];

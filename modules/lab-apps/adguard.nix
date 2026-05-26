@@ -1,5 +1,4 @@
-# AdGuard Home — DNS ad-blocking + web UI (server only).
-# Per-machine opt-in: clients point their DNS to lab's Tailscale IP.
+# Per-machine opt-in: clients point DNS at lab's Tailscale IP.
 {
   config,
   lib,
@@ -10,7 +9,7 @@ lib.mkIf config.fleet.server.enable {
   services.adguardhome = {
     enable = true;
     settings = {
-      http.address = "127.0.0.1:3000"; # web UI behind Caddy
+      http.address = "127.0.0.1:3000"; # Caddy fronts
       dns = {
         bind_hosts = [ "0.0.0.0" ];
         port = 53;
@@ -24,10 +23,9 @@ lib.mkIf config.fleet.server.enable {
           "9.9.9.9"
         ];
       };
-      # Fleet hostname → Tailscale IP rewrites
+      # Flatten fleetHosts {ip = [names]} into [{domain, answer}].
       rewrites =
         let
-          # Flatten {ip = [names]} into [{domain, answer}]
           entries = builtins.concatLists (
             builtins.attrValues (
               builtins.mapAttrs (
@@ -63,12 +61,11 @@ lib.mkIf config.fleet.server.enable {
     };
   };
 
-  # DNS port (web UI is localhost-only, accessed via Caddy)
   networking.firewall.allowedTCPPorts = [ 53 ];
   networking.firewall.allowedUDPPorts = [ 53 ];
 
-  # AdGuard Home runs under DynamicUser — its state lives in /var/lib/private/.
-  # Both /var/lib/private and the subdirectory need 0700 for DynamicUser services.
+  # DynamicUser stores state under /var/lib/private; both /var/lib/private and
+  # the service subdir must be 0700.
   nixfleet.persistence.directories = [
     {
       directory = "/var/lib/private";

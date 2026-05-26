@@ -1,14 +1,3 @@
-# Harmonia binary-cache scope.
-#
-# Thin wrapper around the upstream `services.harmonia.cache` NixOS
-# module. Serves paths directly from the local Nix store over HTTP,
-# signing on the fly. Used by hosts that act as the fleet's cache
-# origin (typically the coordinator) — clients consume it via the
-# framework's `services.nixfleet-cache` module by URL + pubkey.
-#
-# Alternatives in scopes: `attic-server`. Both implement the same
-# nix-cache wire protocol and are interchangeable from the client's
-# perspective; pick one per fleet.
 {
   config,
   lib,
@@ -55,17 +44,15 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # Delegate to upstream harmonia NixOS module
     services.harmonia.cache = {
       enable = true;
       signKeyPaths = [ cfg.signingKeyFile ];
       settings.bind = "0.0.0.0:${toString cfg.port}";
     };
 
-    # Sign paths at build/copy time (needed for nix copy --to ssh://host)
+    # Sign at build/copy time (needed for `nix copy --to ssh://host`).
     nix.settings.secret-key-files = [ cfg.signingKeyFile ];
 
-    # Open firewall port if requested
     networking.firewall.allowedTCPPorts = lib.mkIf cfg.openFirewall [ cfg.port ];
   };
 }

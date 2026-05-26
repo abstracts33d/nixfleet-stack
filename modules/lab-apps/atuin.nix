@@ -1,4 +1,3 @@
-# Atuin sync server — shell history sync across fleet (server only).
 # Clients configure sync_address in modules/core/_home/atuin.nix.
 {
   config,

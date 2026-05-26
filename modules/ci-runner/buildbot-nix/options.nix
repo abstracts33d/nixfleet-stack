@@ -1,9 +1,3 @@
-# buildbot-nix CI driver — option declarations.
-#
-# Sibling of `forgejo-actions` and `hercules` under `nixfleet.ciRunner.*`.
-# Designed for the Garage cache-push pipeline (post-build-hook on the
-# worker). Forgejo provides repo hosting + webhooks + OAuth — buildbot
-# integrates via the Gitea-compatible API.
 { lib, ... }:
 let
   inherit (lib) types;

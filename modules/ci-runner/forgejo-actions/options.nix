@@ -1,4 +1,3 @@
-# Forgejo Actions self-hosted runner — option declarations.
 { lib, ... }:
 let
   inherit (lib) types;

@@ -1,5 +1,3 @@
-# hyxi-cloud-api — async API client for HYXi Cloud (Home Assistant integration dependency).
-# Source: https://pypi.org/project/hyxi-cloud-api/
 {
   lib,
   buildPythonPackage,
@@ -22,11 +20,10 @@ buildPythonPackage rec {
 
   dependencies = [ aiohttp ];
 
-  # aiohttp 3.13.3 in nixpkgs vs >=3.13.5 required — minor patch difference, works fine
+  # nixpkgs ships aiohttp 3.13.3; upstream requires >=3.13.5 (minor patch diff).
   pythonRelaxDeps = [ "aiohttp" ];
 
-  # Tests require network access
-  doCheck = false;
+  doCheck = false; # network-bound
 
   meta = {
     description = "Async API client for HYXi Cloud";

@@ -1,6 +1,4 @@
-# MSunPV solar router — HA config extensions for the HACS MSunPV integration.
-# Router API: GET /status.xml (read), POST /index.xml (commands).
-# No auth — plain HTTP on LAN.
+# Router API: GET /status.xml (read), POST /index.xml (commands). No auth.
 {
   config,
   lib,
@@ -16,9 +14,9 @@ in
 lib.mkIf config.fleet.server.enable {
   services.home-assistant.config = {
     homeassistant.customize = {
-      # Fix MSunPV state_class bug — daily energy sensors use 'measurement'
-      # but HA energy dashboard requires 'total_increasing' for counters that
-      # reset daily. Upstream: github.com/pvergezac/MSunPVIntegration/issues
+      # MSunPV integration ships state_class=measurement but HA energy dashboard
+      # needs total_increasing for daily counters. Upstream issue:
+      # github.com/pvergezac/MSunPVIntegration/issues
       "sensor.consommation_jour".state_class = "total_increasing";
       "sensor.injection_jour".state_class = "total_increasing";
       "sensor.production_jour".state_class = "total_increasing";
@@ -29,19 +27,14 @@ lib.mkIf config.fleet.server.enable {
       "sensor.conso_radiateur_jour".state_class = "total_increasing";
     };
 
-    # MSunPV command API via shell_command (curl --data-urlencode).
-    # POST to /index.xml with parS=<s1_s2>;0;0;0;0;0;0;0;
-    # Position 1 encodes ballon (bits 0-1) + radiateur (bits 2-3):
-    #   ballon:    +1=MANU, +2=AUTO
-    #   radiateur: +4=MANU, +8=AUTO
+    # parS position 1: ballon bits 0-1 (1=MANU, 2=AUTO); radiateur bits 2-3 (4=MANU, 8=AUTO).
     shell_command = {
       msunpv_ballon_off = "${pkgs.curl}/bin/curl -s -X POST --data-urlencode 'parS=0;0;0;0;0;0;0;0;' http://${routerIp}/index.xml";
       msunpv_ballon_auto = "${pkgs.curl}/bin/curl -s -X POST --data-urlencode 'parS=2;0;0;0;0;0;0;0;' http://${routerIp}/index.xml";
       msunpv_ballon_manu = "${pkgs.curl}/bin/curl -s -X POST --data-urlencode 'parS=1;0;0;0;0;0;0;0;' http://${routerIp}/index.xml";
     };
 
-    # Poll router cmdPos directly (independent of MSunPV integration).
-    # cmdPos position 1: 0=off, 1=manu(forced), 2=auto. Polls every 30s.
+    # cmdPos position 1: 0=off, 1=manu (forced), 2=auto. Poll bypasses MSunPV integration.
     command_line = [
       {
         sensor = {
@@ -53,7 +46,6 @@ lib.mkIf config.fleet.server.enable {
       }
     ];
 
-    # 3-way selector: Off / Auto / Forcé
     input_select.cumulus_mode = {
       name = "Cumulus Mode";
       icon = "mdi:water-boiler";
@@ -65,7 +57,6 @@ lib.mkIf config.fleet.server.enable {
       initial = "Auto";
     };
 
-    # Fire shell_command when user changes the selector.
     automation = [
       {
         id = "msunpv_cumulus_mode_control";
@@ -113,7 +104,7 @@ lib.mkIf config.fleet.server.enable {
           }
         ];
       }
-      # Sync selector from router poll (keeps UI in sync if changed externally).
+      # Mirror router state into the selector for externally-changed mode.
       {
         id = "msunpv_cumulus_mode_sync";
         alias = "MSunPV Cumulus Mode Sync";

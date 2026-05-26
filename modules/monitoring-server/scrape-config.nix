@@ -1,5 +1,5 @@
-# Fleet-specific Prometheus scrape jobs (lab only). Base config, alerts,
-# blackbox, TSDB persistence live in the monitoring-server scope.
+# Fleet-specific Prometheus scrape jobs. Base config / alerts / blackbox
+# in modules/monitoring-server/default.nix.
 {
   config,
   lib,
@@ -34,9 +34,7 @@ lib.mkIf config.fleet.server.enable {
       coordinator = config.nixfleet.coordinator.enable;
     };
 
-    # Alertmanager → ntfy (port 2586, topic nixfleet-alerts). Subscribe
-    # via app at https://ntfy.lab.internal or
-    # `curl -s https://ntfy.lab.internal/nixfleet-alerts/json`.
+    # Alertmanager -> ntfy on :2586, topic nixfleet-alerts.
     alertmanager.enable = true;
 
     blackbox = {
@@ -53,8 +51,7 @@ lib.mkIf config.fleet.server.enable {
             labels.os = "darwin";
           }
         ];
-        # Hostname-extraction relabel matches the linux node job so
-        # aether gets a clean `hostname` label for dashboard drill-down.
+        # Mirror the linux node job's hostname relabel for dashboard parity.
         relabel_configs = [
           {
             source_labels = [ "instance" ];
@@ -70,9 +67,8 @@ lib.mkIf config.fleet.server.enable {
         tls_config = {
           ca_file = "/etc/nixfleet/fleet-ca.pem";
           cert_file = "/var/lib/nixfleet/agent-cert.pem";
-          # PKCS#8 export from SSH host key, written by
-          # nixfleet-agent-mtls-key-export below; group-readable by
-          # `nixfleet-mtls` (prometheus + caddy).
+          # PKCS#8 export of SSH host key by nixfleet-agent-mtls-key-export
+          # (below); group-readable by nixfleet-mtls (prometheus + caddy).
           key_file = "/var/lib/nixfleet/agent-mtls-key.pem";
         };
         static_configs = [ { targets = [ "lab:8080" ]; } ];
@@ -90,10 +86,9 @@ lib.mkIf config.fleet.server.enable {
     ];
   };
 
-  # Convert SSH host key to PKCS#8 PEM for local mTLS scrape clients
-  # (Prometheus, fleet-status). ssh-keygen's `-m PEM` for ed25519 emits
-  # OpenSSH-PEM, not PKCS#8 (verified empirically); python cryptography
-  # handles ed25519 OpenSSH→PKCS#8 cleanly. Canonical key untouched.
+  # Convert SSH host key to PKCS#8 PEM for local mTLS clients.
+  # ssh-keygen -m PEM emits OpenSSH-PEM for ed25519, not PKCS#8 (verified);
+  # python cryptography handles the conversion. Canonical key untouched.
   users.groups.nixfleet-mtls = { };
   users.users.prometheus.extraGroups = [ "nixfleet-mtls" ];
   users.users.caddy.extraGroups = [ "nixfleet-mtls" ];

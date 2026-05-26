@@ -1,8 +1,3 @@
-# Prometheus server with fleet-tuned defaults and basic alert rules.
-#
-# Provides a ready-to-use Prometheus instance for fleet monitoring.
-# Consumers add scrape targets via nixfleet.monitoring.server.scrapeConfigs
-# or let the scope auto-discover node-exporter targets from a static list.
 {
   config,
   lib,
@@ -212,10 +207,8 @@ in
             (lib.optional (cfg.targets != [ ]) {
               job_name = "node";
               static_configs = [ { inherit (cfg) targets; } ];
-              # Strip the `:9100` (or any port) from `instance` and stash
-              # the bare hostname in a `hostname` label. Lets dashboards
-              # cross-link to NixFleet Events with a clean
-              # `?var-hostname=<host>` value via Grafana data links.
+              # Strip port from `instance` into a `hostname` label so Grafana
+              # data links can pass clean `?var-hostname=<host>`.
               relabel_configs = [
                 {
                   source_labels = [ "instance" ];
@@ -227,9 +220,6 @@ in
             })
             ++ cfg.extraScrapeConfigs;
 
-          # Point the Prometheus server at the local Alertmanager so
-          # firing alerts get pushed (via webhook) instead of just sitting
-          # on /alerts.
           alertmanagers = lib.optional cfg.alertmanager.enable {
             static_configs = [ { targets = [ "127.0.0.1:${toString cfg.alertmanager.port}" ]; } ];
           };
@@ -242,9 +232,8 @@ in
           configuration = {
             route = {
               receiver = "ntfy";
-              # Group same-name + same-severity alerts in one notification;
-              # 30s wait keeps bursts from spamming, 5m repeat keeps
-              # ongoing-firing visible without nagging.
+              # 30s wait absorbs bursts; 5m group_interval / 1h repeat keep
+              # ongoing alerts visible without nagging.
               group_by = [
                 "alertname"
                 "severity"

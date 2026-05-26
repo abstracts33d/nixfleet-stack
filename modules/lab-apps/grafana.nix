@@ -1,5 +1,3 @@
-# Grafana — dashboards wired to Prometheus + the Infinity JSON datasource
-# for live CP API queries (server only).
 {
   config,
   lib,
@@ -9,26 +7,23 @@
 lib.mkIf config.fleet.server.enable {
   services.grafana = {
     enable = true;
-    # Infinity lets dashboards query the CP's `/v1/*` JSON endpoints directly,
-    # which is how per-host/per-rollout state surfaces in the UI without
-    # widening the CP's Prometheus metrics surface (kept intentionally minimal —
-    # counters + build_info only).
+    # Infinity datasource queries CP /v1/* directly so per-host state surfaces
+    # without widening the CP's Prometheus surface (kept minimal: counters + build_info).
     declarativePlugins = [ pkgs.grafanaPlugins.yesoreyeram-infinity-datasource ];
     settings = {
       server = {
-        http_addr = "127.0.0.1"; # accessed via Caddy
+        http_addr = "127.0.0.1"; # Caddy fronts
         http_port = 3100;
         domain = "grafana.lab.internal";
       };
       security.secret_key = "$__file{${config.age.secrets.grafana-secret-key.path}}";
-      # Anonymous read access for local/tailnet use
+      # Anonymous read on tailnet.
       "auth.anonymous" = {
         enabled = true;
         org_role = "Viewer";
       };
     };
 
-    # Auto-provision Prometheus datasource
     provision = {
       enable = true;
       datasources.settings.datasources = [
@@ -48,14 +43,12 @@ lib.mkIf config.fleet.server.enable {
           isDefault = false;
           editable = false;
           jsonData = {
-            # mTLS against the CP. Reuses the lab agent cert; the CP accepts
-            # any agent client cert for read-only /v1 endpoints.
+            # mTLS reuses lab agent cert; CP accepts any agent cert for /v1 reads.
             tlsAuth = true;
             tlsAuthWithCACert = true;
             global_queries = [ ];
           };
-          # `$__file{path}` is replaced at startup with the file contents — keeps
-          # the key material out of /nix/store and out of any provisioning YAML.
+          # `$__file{path}` is read at startup → keeps key material out of /nix/store.
           secureJsonData = {
             tlsCACert = "$__file{/etc/nixfleet/fleet-ca.pem}";
             tlsClientCert = "$__file{/var/lib/nixfleet/agent-cert.pem}";
@@ -63,12 +56,8 @@ lib.mkIf config.fleet.server.enable {
           };
         }
       ];
-      # `allowUiUpdates = true` so dashboards can be tuned in the
-      # browser; the file in `./grafana-dashboards` still wins on
-      # Grafana restart (it's the source of truth in git). To persist
-      # browser edits: export the dashboard JSON via the UI and commit
-      # it back to this directory. Flip to `false` once the dashboard
-      # is stable to lock it down.
+      # allowUiUpdates=true lets browser-edits stick until restart; file in
+      # ./grafana-dashboards wins on reload. Export+commit JSON to persist edits.
       dashboards.settings.providers = [
         {
           name = "Fleet";
@@ -81,10 +70,8 @@ lib.mkIf config.fleet.server.enable {
     };
   };
 
-  # Port not opened — accessed via Caddy reverse proxy
-
-  # Grafana needs read on /var/lib/nixfleet/agent-mtls-key.pem (mode 0640,
-  # group nixfleet-mtls). The export unit lives in monitoring-prometheus.nix.
+  # Grafana reads /var/lib/nixfleet/agent-mtls-key.pem (0640, nixfleet-mtls).
+  # Export unit: monitoring-prometheus.nix.
   users.users.grafana.extraGroups = [ "nixfleet-mtls" ];
   systemd.services.grafana.after = [ "nixfleet-agent-mtls-key-export.service" ];
 

@@ -1,8 +1,6 @@
-# Caddy — reverse proxy for lab services (server only).
-# Dual-domain:
-#   - *.lab.internal: internal TLS (Caddy CA) for fleet/Tailscale access
-#   - *.theabstractconnection.com: Let's Encrypt wildcard (DNS-01) for LAN + external
-# NixFleet CP stays on its own mTLS port, not proxied.
+# Dual-domain reverse proxy: *.lab.internal (Caddy CA, tailnet) and
+# *.theabstractconnection.com (LE DNS-01 wildcard via Cloudflare).
+# NixFleet CP uses its own mTLS port, not proxied here.
 {
   config,
   lib,
@@ -33,7 +31,6 @@ let
     </html>
   '';
 
-  # Internal vhosts (all services, internal TLS)
   mkInternalVhost = _name: svc: {
     name = if svc.subdomain != null then "${svc.subdomain}.${internalDomain}" else internalDomain;
     value = {
@@ -44,7 +41,6 @@ let
     };
   };
 
-  # Public vhosts (external services with a subdomain, ACME via Cloudflare DNS-01)
   externalServices = lib.filterAttrs (_: svc: svc.external && svc.subdomain != null) services;
 
   mkPublicVhost = _name: svc: {
@@ -87,9 +83,7 @@ lib.mkIf config.fleet.server.enable {
     virtualHosts = internalVhosts // publicVhosts;
   };
 
-  # Inject Cloudflare API token from agenix secret into Caddy's environment.
-  # The secret file contains only the token value (no KEY=VALUE format),
-  # so we use a wrapper script to export it as an env var.
+  # agenix secret holds raw token (no KEY=VALUE), so wrap it into EnvironmentFile.
   systemd.services.caddy.serviceConfig.ExecStartPre = [
     "+${pkgs.writeShellScript "caddy-cloudflare-env" ''
       TOKEN=$(cat ${config.age.secrets."cloudflare-api-token".path})

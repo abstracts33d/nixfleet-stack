@@ -1,10 +1,3 @@
-# Hercules CI agent driver.
-#
-# Sibling of `forgejo-actions` under the `nixfleet.ciRunner.*`
-# umbrella. Self-contained: own option subnamespace
-# (`nixfleet.ciRunner.hercules.*`), own systemd unit. Coexists
-# fine with the forgejo-actions sibling — different services,
-# different option subtrees.
 {
   config,
   lib,

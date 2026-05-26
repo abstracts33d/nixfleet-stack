@@ -1,5 +1,4 @@
-# Cloudflare Tunnel — outbound tunnel from lab to Cloudflare edge.
-# No inbound ports needed. Tunnel routes external traffic to Caddy.
+# Outbound tunnel to Cloudflare edge → Caddy. No inbound ports needed.
 {
   config,
   lib,
@@ -10,7 +9,6 @@ let
   services = fleetServices;
   publicDomain = "theabstractconnection.com";
 
-  # Build ingress rules from services with external = true (subdomain only)
   externalServices = lib.filterAttrs (_: svc: svc.external && svc.subdomain != null) services;
 
   serviceIngress = lib.mapAttrs' (_name: svc: {
@@ -24,7 +22,7 @@ let
     };
   }) externalServices;
 
-  # Root domain — static site (served by Caddy file_server)
+  # Root domain served by Caddy file_server.
   ingress = serviceIngress // {
     ${publicDomain} = {
       service = "https://localhost:443";
@@ -45,7 +43,6 @@ lib.mkIf config.fleet.server.enable {
     };
   };
 
-  # Ensure cloudflared user exists for secret ownership
   users.users.cloudflared = {
     isSystemUser = true;
     group = "cloudflared";

@@ -1,7 +1,4 @@
-# Home Assistant — home automation platform (server only).
-# Config directory is writable for HACS and custom integrations.
-# PostgreSQL recorder instead of SQLite.
-# Initial setup via web UI (see docs/manual-setup.md).
+# PostgreSQL recorder (not SQLite); HACS needs configWritable. Initial setup via web UI.
 {
   config,
   lib,
@@ -13,11 +10,11 @@
   config = lib.mkIf config.fleet.server.enable {
     services.home-assistant = {
       enable = true;
-      openFirewall = true; # LAN + Tailscale access (phones use IP:8123 directly)
-      configWritable = true; # HACS and custom integrations need write access
+      openFirewall = true; # phones hit IP:8123 directly on LAN/Tailscale
+      configWritable = true; # HACS writes here
       extraPackages = ps: [
-        ps.psycopg2 # PostgreSQL driver for recorder
-        (ps.callPackage ../../../packages/hyxi-cloud-api.nix { }) # HYXi Cloud integration
+        ps.psycopg2
+        (ps.callPackage ../../../packages/hyxi-cloud-api.nix { })
       ];
 
       extraComponents = [
@@ -53,7 +50,6 @@
       };
     };
 
-    # PostgreSQL database for Home Assistant recorder
     services.postgresql = {
       enable = true;
       ensureDatabases = [ "hass" ];

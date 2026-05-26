@@ -1,6 +1,3 @@
-# Blackbox exporter + probe scrape job — folded into monitoring-server.
-# Consumers declare a list of probes; the module generates the blackbox
-# config and a Prometheus scrape job targeting them.
 {
   config,
   lib,

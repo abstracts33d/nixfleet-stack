@@ -1,4 +1,3 @@
-# Reverse-proxy scope (Caddy) — option declarations.
 { lib, ... }:
 let
   inherit (lib) types;

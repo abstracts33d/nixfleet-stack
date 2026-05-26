@@ -1,5 +1,4 @@
-# Samba file server — shared documents + media (server only).
-# Documents: authenticated access (s33d user). Media: guest read-only.
+# Documents: authenticated (primary operator). Media: guest read-only.
 {
   config,
   lib,
@@ -11,7 +10,7 @@ in
 lib.mkIf config.fleet.server.enable {
   services.samba = {
     enable = true;
-    nmbd.enable = false; # NetBIOS — crashes on Samba 4.22, redundant with WSDD + Avahi
+    nmbd.enable = false; # crashes on Samba 4.22, redundant with WSDD + Avahi
     openFirewall = true;
     settings = {
       global = {
@@ -38,7 +37,6 @@ lib.mkIf config.fleet.server.enable {
     };
   };
 
-  # Bootstrap Samba user from agenix secret at boot.
   # smbpasswd needs the password piped twice (new + confirm).
   systemd.services.samba-user-setup = {
     description = "Set up Samba user from agenix secret";
@@ -59,13 +57,11 @@ lib.mkIf config.fleet.server.enable {
     '';
   };
 
-  # Windows discovery (WS-Discovery)
   services.samba-wsdd = {
     enable = true;
     openFirewall = true;
   };
 
-  # mDNS/Bonjour discovery (macOS, Linux)
   services.avahi = {
     enable = true;
     nssmdns4 = true;
@@ -75,7 +71,6 @@ lib.mkIf config.fleet.server.enable {
     };
   };
 
-  # Create share directories (systemd tmpfiles)
   systemd.tmpfiles.rules = [
     "d ${shareRoot}/documents 0775 nobody nogroup -"
   ];

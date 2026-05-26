@@ -1,6 +1,4 @@
-# Immich — self-hosted photo management (server only).
-# Google Photos replacement with auto-upload from phones.
-# Initial setup via web UI (see docs/manual-setup.md).
+# Initial setup via web UI; phones auto-upload.
 {
   config,
   lib,
@@ -18,9 +16,8 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # CLI for bulk import/upload (immich upload --album "Review" --recursive /path)
     environment.systemPackages = [
-      pkgs.immich-cli # standard upload/download
+      pkgs.immich-cli
       pkgs.immich-go # Google Takeout import (handles JSON metadata)
     ];
 

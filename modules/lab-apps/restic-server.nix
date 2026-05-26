@@ -1,6 +1,5 @@
-# Restic REST server — append-only backup target (server only).
-# Clients push backups via https://restic.lab.internal.
-# Server-side prune runs weekly to reclaim space (append-only clients can't prune).
+# Append-only REST server at https://restic.lab.internal.
+# Append-only clients can't prune; weekly server-side prune reclaims space.
 {
   config,
   lib,
@@ -11,7 +10,7 @@ let
   repoDir = "/var/lib/restic-fleet";
 in
 lib.mkIf config.fleet.server.enable {
-  # REST server — append-only so compromised clients can't delete backups
+  # Append-only: compromised clients can't delete prior snapshots.
   systemd.services.restic-rest-server = {
     description = "Restic REST server (append-only)";
     after = [ "network.target" ];
@@ -25,7 +24,6 @@ lib.mkIf config.fleet.server.enable {
     };
   };
 
-  # Initialize repo if it doesn't exist
   systemd.services.restic-repo-init = {
     description = "Initialize restic repository";
     after = [ "restic-rest-server.service" ];
@@ -48,8 +46,6 @@ lib.mkIf config.fleet.server.enable {
     '';
   };
 
-  # Server-side prune — append-only clients can't actually prune.
-  # Run weekly to reclaim disk space.
   systemd.services.restic-server-prune = {
     description = "Restic server-side prune";
     serviceConfig.Type = "oneshot";

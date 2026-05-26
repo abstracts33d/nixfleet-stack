@@ -1,8 +1,3 @@
-# Garage S3-compatible object storage — option declarations.
-#
-# Cluster formation is RUNTIME state, not declarative: after first
-# deploy on a new node, the operator runs `garage node connect` +
-# `garage layout` once. The scope only stands up the daemon.
 { lib, ... }:
 let
   inherit (lib) types;
