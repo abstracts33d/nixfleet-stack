@@ -24,6 +24,10 @@ let
   # osquery silently ignores these when set inside the JSON config file —
   # the plugins they select are loaded before the config is read.
   # services.osquery.flags renders them as CLI args to osqueryd.
+  #
+  # `logger_path`, `database_path`, `pidfile` are upstream read-only
+  # (pinned to /var/log/osquery, /var/lib/osquery/osquery.db, /run/osquery/*).
+  # Do not declare them here — assertion failure on multiple definitions.
   tlsFlags = {
     tls_hostname = lib.removePrefix "https://" (lib.removePrefix "http://" cfg.fleetDmUrl);
     enroll_secret_path = toString cfg.enrollSecretFile;
@@ -34,7 +38,6 @@ let
     logger_plugin = "tls,filesystem";
     logger_tls_endpoint = "/api/v1/osquery/log";
     logger_tls_period = "10";
-    logger_path = builtins.dirOf cfg.logForwarding.lokiFile;
     disable_distributed = "false";
     distributed_plugin = "tls";
     distributed_tls_read_endpoint = "/api/v1/osquery/distributed/read";
