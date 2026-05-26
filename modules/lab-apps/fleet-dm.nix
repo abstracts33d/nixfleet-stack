@@ -127,8 +127,8 @@ in
             --user=root <<'SQL'
 CREATE DATABASE IF NOT EXISTS ${cfg.mysql.database}
   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER IF NOT EXISTS '${cfg.mysql.user}'@'127.0.0.1' IDENTIFIED BY '';
-CREATE USER IF NOT EXISTS '${cfg.mysql.user}'@'localhost' IDENTIFIED BY '';
+CREATE USER IF NOT EXISTS '${cfg.mysql.user}'@'127.0.0.1';
+CREATE USER IF NOT EXISTS '${cfg.mysql.user}'@'localhost';
 GRANT ALL PRIVILEGES ON ${cfg.mysql.database}.* TO '${cfg.mysql.user}'@'127.0.0.1';
 GRANT ALL PRIVILEGES ON ${cfg.mysql.database}.* TO '${cfg.mysql.user}'@'localhost';
 FLUSH PRIVILEGES;
