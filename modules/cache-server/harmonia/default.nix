@@ -1,10 +1,27 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }:
 let
   cfg = config.services.nixfleet-cache-server;
+  # Readiness gate: actix-web in harmonia 3.x registers routes lazily across workers,
+  # so a unit "started" by systemd can briefly 404 on /nix-cache-info while workers
+  # warm up. Agents probing in that window mark rollouts Failed. Hold the unit in
+  # `activating` until /nix-cache-info actually answers 200.
+  waitReady = pkgs.writeShellScript "harmonia-wait-ready" ''
+    set -eu
+    for _ in $(seq 1 60); do
+      if ${pkgs.curl}/bin/curl -sf --max-time 2 \
+        "http://localhost:${toString cfg.port}/nix-cache-info" >/dev/null; then
+        exit 0
+      fi
+      sleep 1
+    done
+    echo "harmonia did not serve /nix-cache-info within 60s" >&2
+    exit 1
+  '';
 in
 {
   options.services.nixfleet-cache-server = {
@@ -54,5 +71,7 @@ in
     nix.settings.secret-key-files = [ cfg.signingKeyFile ];
 
     networking.firewall.allowedTCPPorts = lib.mkIf cfg.openFirewall [ cfg.port ];
+
+    systemd.services.harmonia.serviceConfig.ExecStartPost = [ "${waitReady}" ];
   };
 }
