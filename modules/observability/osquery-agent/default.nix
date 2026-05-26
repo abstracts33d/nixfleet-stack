@@ -1,6 +1,17 @@
 # osquery agent — NixOS variant. Wraps services.osquery with tier-B allowlist
-# packs, dual logging (TLS to fleet-dm + filesystem to Vector→Loki), and a
-# daily compliance-evidence timer feeding nixfleet-compliance.
+# packs and dual logging (TLS to fleet-dm + filesystem to Vector → Loki).
+#
+# Compliance-evidence snapshots (the local osquery-evidence.json) are the
+# job of `compliance.evidence.osquery` in nixfleet-compliance (commit
+# f647506 on dev). This module no longer carries its own oneshot/timer —
+# operators that want the per-host snapshot enable the producer in their
+# consumer config:
+#
+#   compliance.evidence.osquery.enable = true;
+#
+# The two compose: this module runs the daemon (osqueryd) + enrolls with
+# fleet-dm; the compliance producer runs osqueryi -A schedule once per
+# activation and writes the file the operator-side CLI fetches.
 {
   config,
   lib,
@@ -85,27 +96,5 @@ in
       "d /var/lib/osquery 0750 osquery osquery -"
       "d ${builtins.dirOf cfg.logForwarding.lokiFile} 0750 osquery osquery -"
     ];
-
-    # Daily compliance-evidence snapshot — integrates with nixfleet-compliance.
-    systemd.services.nixfleet-osquery-evidence = {
-      description = "osquery compliance evidence snapshot";
-      after = [ "osqueryd.service" ];
-      requires = [ "osqueryd.service" ];
-      serviceConfig = {
-        Type = "oneshot";
-        ExecStart = "${pkgs.osquery}/bin/osqueryi --json --config_path ${packs}/compliance.conf -A schedule";
-        StandardOutput = "file:/var/lib/nixfleet-compliance/osquery-evidence.json";
-        StateDirectory = "nixfleet-compliance";
-      };
-    };
-    systemd.timers.nixfleet-osquery-evidence = {
-      description = "Daily osquery compliance evidence snapshot";
-      wantedBy = [ "timers.target" ];
-      timerConfig = {
-        OnCalendar = "daily";
-        Persistent = true;
-        RandomizedDelaySec = "1h";
-      };
-    };
   };
 }
