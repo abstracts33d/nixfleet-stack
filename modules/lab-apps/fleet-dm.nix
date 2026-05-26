@@ -100,7 +100,7 @@ in
           set -eu
           if [ -f ${cfg.mysql.dataDir}/aria_log_control ]; then
             echo "fleet-dm-mysql: detected MariaDB layout; wiping (no fleet data ever landed)" >&2
-            ${pkgs.coreutils}/bin/find ${cfg.mysql.dataDir} -mindepth 1 -delete
+            ${pkgs.findutils}/bin/find ${cfg.mysql.dataDir} -mindepth 1 -delete
           fi
           if [ ! -d ${cfg.mysql.dataDir}/mysql ]; then
             ${pkgs.mysql80}/bin/mysqld \
