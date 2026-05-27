@@ -209,11 +209,6 @@ SQL
             --mysql_database=${cfg.mysql.database} \
             --no-prompt
         '';
-        # --osquery_enroll_secret_path seeds the global enroll secret into
-        # the database at startup. Without it fleet-dm rejects every
-        # enrollment with "No node key returned from TLS enroll plugin"
-        # because no secret exists in the enroll_secrets table for fleet
-        # to match against. Idempotent: fleet-dm upserts on each start.
         ExecStart = ''
           ${cfg.package}/bin/fleet serve \
             --mysql_address=127.0.0.1:${toString cfg.mysql.port} \
@@ -221,8 +216,35 @@ SQL
             --mysql_database=${cfg.mysql.database} \
             --redis_address=127.0.0.1:${toString cfg.redis.port} \
             --server_address=127.0.0.1:${toString cfg.port} \
-            --server_tls=false \
-            --osquery_enroll_secret_path=${cfg.enrollSecretFile}
+            --server_tls=false
+        '';
+        # Seed the global enroll secret directly into MySQL. fleet-dm has
+        # no startup flag for this — the official paths (fleetctl apply,
+        # web UI) both require an already-bootstrapped admin user, which
+        # creates a chicken/egg for a fully declarative deploy.
+        # enroll_secrets is part of fleet's stable schema (migrations have
+        # carried it since v3.x); INSERT IGNORE is idempotent across
+        # reboots. fleet-dm reads enroll_secrets on every enroll request,
+        # so no server restart is needed after a seed.
+        # Uses TCP rather than the unix socket because the mysql socket is
+        # owned by fleet-dm-mysql:fleet-dm-mysql (mode 0750 via
+        # RuntimeDirectory) while this post-hook runs as fleet-dm.
+        ExecStartPost = pkgs.writeShellScript "fleet-dm-seed-enroll-secret" ''
+          set -eu
+          # Wait up to 60s for fleet-dm to finish migrating + bind its port.
+          for i in $(seq 1 60); do
+            if ${pkgs.curl}/bin/curl -fsS -o /dev/null \
+                "http://127.0.0.1:${toString cfg.port}/healthz" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          secret=$(${pkgs.coreutils}/bin/cat ${cfg.enrollSecretFile})
+          ${pkgs.mysql80}/bin/mysql \
+            --host=127.0.0.1 --port=${toString cfg.mysql.port} \
+            --user=${cfg.mysql.user} \
+            --database=${cfg.mysql.database} \
+            -e "INSERT IGNORE INTO enroll_secrets (secret) VALUES ('$secret');"
         '';
         Restart = "on-failure";
         RestartSec = 5;
