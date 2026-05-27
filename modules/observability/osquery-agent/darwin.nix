@@ -30,6 +30,14 @@ let
   # osquery silently ignores them inside the config file (plugin selection
   # happens before the config is parsed). See NixOS variant for the same fix.
   tlsHostname = lib.removePrefix "https://" (lib.removePrefix "http://" cfg.fleetDmUrl);
+  # TODO(aether-activation): Darwin needs a different tls_server_certs path
+  # than the NixOS variant — macOS has no /etc/ssl/certs/ca-certificates.crt
+  # populated by security.pki.certificateFiles. Likely use the system root
+  # bundle exported via `security export -k /System/Library/Keychains/...`
+  # to a PEM file at activation time, or rely on macOS' native trust by
+  # leaving tls_server_certs unset and using --tls_hostname with a cert
+  # the system keychain already trusts (ACME-issued internal domain).
+  # Not blocking — aether has nixfleet.osquery.enable = false fleet-side.
   osqueryFlagfile = pkgs.writeText "osquery.flags" ''
     --tls_hostname=${tlsHostname}
     --enroll_secret_path=${toString cfg.enrollSecretFile}

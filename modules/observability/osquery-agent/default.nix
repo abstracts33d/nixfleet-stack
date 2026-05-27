@@ -41,6 +41,13 @@ let
   # Do not declare them here — assertion failure on multiple definitions.
   tlsFlags = {
     tls_hostname = lib.removePrefix "https://" (lib.removePrefix "http://" cfg.fleetDmUrl);
+    # osquery doesn't consult the system trust store by default — it looks
+    # at its own hardcoded /opt/osquery/share/osquery/certs/certs.pem path
+    # (an upstream Linux-package assumption that doesn't exist on NixOS).
+    # Point it at the NixOS system bundle so it picks up whatever the
+    # operator anchored via security.pki.certificateFiles (typically the
+    # local Caddy CA for tls internal vhosts).
+    tls_server_certs = "/etc/ssl/certs/ca-certificates.crt";
     enroll_secret_path = toString cfg.enrollSecretFile;
     enroll_tls_endpoint = "/api/v1/osquery/enroll";
     config_plugin = "tls";
