@@ -209,6 +209,11 @@ SQL
             --mysql_database=${cfg.mysql.database} \
             --no-prompt
         '';
+        # --osquery_enroll_secret_path seeds the global enroll secret into
+        # the database at startup. Without it fleet-dm rejects every
+        # enrollment with "No node key returned from TLS enroll plugin"
+        # because no secret exists in the enroll_secrets table for fleet
+        # to match against. Idempotent: fleet-dm upserts on each start.
         ExecStart = ''
           ${cfg.package}/bin/fleet serve \
             --mysql_address=127.0.0.1:${toString cfg.mysql.port} \
@@ -216,7 +221,8 @@ SQL
             --mysql_database=${cfg.mysql.database} \
             --redis_address=127.0.0.1:${toString cfg.redis.port} \
             --server_address=127.0.0.1:${toString cfg.port} \
-            --server_tls=false
+            --server_tls=false \
+            --osquery_enroll_secret_path=${cfg.enrollSecretFile}
         '';
         Restart = "on-failure";
         RestartSec = 5;
